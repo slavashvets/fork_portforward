@@ -1404,7 +1404,6 @@ dependencies = [
  "openssl",
  "pyo3",
  "pyo3-async-runtimes",
- "pyo3-build-config",
  "pyo3-ffi",
  "tokio",
  "tokio-stream",
