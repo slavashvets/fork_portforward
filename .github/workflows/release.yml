@@ -49,6 +49,14 @@ jobs:
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
           manylinux: auto
           before-script-linux: |
+            # --- s390x baseline z10 ---------------------------------
+            if [[ "${{ matrix.platform.target }}" == "s390x" ]]; then
+                export CFLAGS="-march=z10 -mzarch"
+                export CXXFLAGS="$CFLAGS"
+                export RUSTFLAGS="-C target-cpu=z10"
+            fi
+            # --------------------------------------------------------
+
             # If we're running on rhel centos, install needed packages.
             if command -v yum &> /dev/null; then
                 yum update -y && yum install -y perl-core openssl openssl-devel pkgconfig libatomic
