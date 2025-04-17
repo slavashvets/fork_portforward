@@ -28,10 +28,6 @@ jobs:
               uses: actions/setup-python@v5
               with:
                   python-version: 3.9
-
-            - name: Install system dependencies
-              run: sudo apt-get update && sudo apt-get install -y build-essential libssl-dev pkg-config perl
-
             # Setup dependencies and _portforward
             - name: Install dependencies
               run: |
