@@ -15,6 +15,7 @@ use once_cell::sync::Lazy;
 use std::net::SocketAddr;
 use std::{collections::HashMap, path::Path};
 use std::str::FromStr;
+use std::time::Duration;
 use tokio::{
     io::{AsyncRead, AsyncWrite},
     net::TcpListener,
@@ -156,17 +157,28 @@ async fn setup_forward_task(
     let server = TcpListenerStream::new(tcp_listener)
         .take_until(rx)
         .try_for_each(|client_conn| async {
+            let mut client_conn = client_conn?;
+
+            // Enable TCP keepalive to prevent AWS NLB from dropping idle
+            // connections. Tokio's `TcpStream` does not expose a direct
+            // `set_keepalive` method, so convert it into the standard
+            // stream type to configure the option and then convert it back.
+            let mut std_stream = client_conn.into_std()?;
+            std_stream.set_keepalive(Some(Duration::from_secs(300)))?;
+            let mut client_conn = tokio::net::TcpStream::from_std(std_stream)?;
+
             let pods = pods.clone();
             let pod_name = pod_name.clone();
 
             tokio::spawn(async move {
-                let forwarding = forward_connection(&pods, &pod_name, pod_port, client_conn);
+                let forwarding =
+                    forward_connection(&pods, &pod_name, pod_port, client_conn);
                 if let Err(e) = forwarding.await {
                     error!("failed to forward connection: {}", e);
                 }
             });
             // keep the server running
-            Ok(())
+            Ok::<(), std::io::Error>(())
         });
     if let Err(e) = server.await {
         error!("server error: {}", e);
